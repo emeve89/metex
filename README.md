@@ -1,20 +1,7 @@
 # Metex
 
-**TODO: Add description**
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
-
-  1. Add metex to your list of dependencies in `mix.exs`:
-
-        def deps do
-          [{:metex, "~> 0.0.1"}]
-        end
-
-  2. Ensure metex is started before your application:
-
-        def application do
-          [applications: [:metex]]
-        end
-
+```
+iex(1)> cities = ["Tucumán", "Buenos Aires", "Esslingen am Neckar"]
+iex(2)> Metex.temperatures_of(cities)
+Buenos Aires: 26.0ºC, Esslingen am Neckar: 2.0ºC, Tucumán: 31.0ºC
+```
