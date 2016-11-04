@@ -1,23 +1,66 @@
 defmodule Metex.Worker do
+  use GenServer
 
-  def loop do
-    receive do
-      {sender_pid, location} ->
-        send(sender_pid, {:ok, temperature_of(location)})
-      _ ->
-        IO.puts "don't know how to process this message"
-    end
-    loop
+  ## Client API
+
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, :ok, opts)
   end
 
-  def temperature_of(location) do
-    result = location |> url_for |> HTTPoison.get |> parse_response
-    case result do
+  def get_temperature(pid, location) do
+    GenServer.call(pid, {:location, location})
+  end
+
+  def get_stats(pid) do
+    GenServer.call(pid, :get_stats)
+  end
+
+  def reset_stats(pid) do
+    GenServer.cast(pid, :reset_stats)
+  end
+
+  def stop(pid) do
+    GenServer.cast(pid, :stop)
+  end
+
+  ## Server Callbacks
+
+  def init(:ok) do
+    {:ok, %{}}
+  end
+
+  def handle_call({:location, location}, _from, stats) do
+    case temperature_of(location) do
       {:ok, temp} ->
-        "#{location}: #{temp}ºC"
-      :error ->
-        "#{location} not found"
+        new_stats = update_stats(stats, location)
+        {:reply, "#{temp}ºC", new_stats}
+      _ ->
+        {:reply, :error, stats}
     end
+  end
+
+  def handle_call(:get_stats, _from, stats) do
+    {:reply, stats, stats}
+  end
+
+  def handle_cast(:reset_stats, _stats) do
+    {:noreply, %{}}
+  end
+
+  def handle_cast(:stop, stats) do
+    {:stop, :normal, stats}
+  end
+
+  def terminate(reason, stats) do
+    IO.puts "server terminated because of #{inspect reason}"
+    inspect stats
+    :ok
+  end
+
+  ## Helper Functions
+
+  defp temperature_of(location) do
+    url_for(location) |> HTTPoison.get |> parse_response
   end
 
   defp url_for(location) do
@@ -44,6 +87,15 @@ defmodule Metex.Worker do
 
   defp apikey do
     "339228f0c7b06d1970756149dc9239ee"
+  end
+
+  defp update_stats(old_stats, location) do
+    case Map.has_key?(old_stats, location) do
+      true ->
+        Map.update!(old_stats, location, &(&1 + 1))
+      false ->
+        Map.put_new(old_stats, location, 1)
+    end
   end
 
 end
